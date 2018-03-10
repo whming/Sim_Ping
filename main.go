@@ -591,7 +591,7 @@ func Ping_test(s io.ReadWriteCloser,unitNum int,PingNum int, conn net.Conn) ( er
 		data_str :=strconv.Itoa(unitNum)
 		data_str += "$data"
 		send_tcp(conn,data_str)
-		time.Sleep(5*time.Second)
+		time.Sleep(3*time.Second)
 	}
 	return nil
 }
