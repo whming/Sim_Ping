@@ -238,6 +238,7 @@ func httpPost( strurl string,strbody string) {
 		strings.NewReader(strbody))
 	if err != nil {
 		fmt.Println(err)
+		return
 	}
 
 	defer resp.Body.Close()
