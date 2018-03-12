@@ -238,6 +238,7 @@ func httpPost( strurl string,strbody string) {
 		strings.NewReader(strbody))
 	if err != nil {
 		fmt.Println(err)
+		return
 	}
 
 	defer resp.Body.Close()
@@ -730,6 +731,7 @@ func main() {
 			num = 1
 		}
 		// 出让时间片
+		//asd
 	}
 
 }
