@@ -13,7 +13,7 @@ import (
 	"time"
 	"github.com/tarm/goserial"
 	"sync"
-	"os"
+	//"os"
 	"net/http"
 	"io/ioutil"
 )
@@ -134,7 +134,7 @@ func receiveCLOSECom(s io.ReadWriteCloser,unitNum int,conn net.Conn)( code int ,
 		tcp_msg = tcp_msg + strResult
 		log.Println(tcp_msg)
 		send_tcp(conn,tcp_msg)
-		if strings.Contains(strResult,"+NETCLOSE:"){
+		if strings.Contains(strResult,"+NETCLOSE: 0"){
 			break
 		}else if strings.Contains(strResult,"ERROR"){
 			break
@@ -254,7 +254,9 @@ func Ping_test(s io.ReadWriteCloser,unitNum int,PingNum int, conn net.Conn) ( er
 
 	apnInfoes,apnNum :=get_cmd_info(unitNum,conn)
 	//log.Println("apnInfoes[0]=",apnInfoes[0].apnName,",num=",apnNum,"unitNUM=",unitNum)
-
+	if apnNum == 0 {
+		return nil
+	}
 	timeStr1 := time.Now().Format("2006-01-02")
 	//fmt.Println(timeStr1)
 	//使用Parse 默认获取为UTC时区 需要获取本地时区 所以使用ParseInLocation +" 23:59:59"
@@ -305,64 +307,64 @@ func Ping_test(s io.ReadWriteCloser,unitNum int,PingNum int, conn net.Conn) ( er
 		}
 		receiveCom(s,unitNum,conn)
 
-			n, err = s.Write([]byte("AT+NETOPEN\r\n"))
+		n, err = s.Write([]byte("AT+NETOPEN\r\n"))
+		if err != nil {
+			log.Fatal(err,n)
+		}
+		opencode, err :=receiveAtNetOpenCom(s,unitNum,conn)
+		if opencode == 10002 {
+			n, err = s.Write([]byte("AT+NETCLOSE\r\n"))
 			if err != nil {
 				log.Fatal(err,n)
 			}
-			opencode, err :=receiveAtNetOpenCom(s,unitNum,conn)
-			if opencode == 10002 {
-				n, err = s.Write([]byte("AT+NETCLOSE\r\n"))
-				if err != nil {
-					log.Fatal(err,n)
-				}
-				receiveCom(s,unitNum,conn)
-				i -= 1
-				continue
-			}else if opencode == 10003 {
-				StrBody := "unitPhone=" + apnInfoes[i].phoneNum
-				now := time.Now()
-				year, month, day := now.Date()
-				today_str := fmt.Sprintf("%04d%02d%02d", year, month, day)
-				resultSn := fmt.Sprintf("%03d%d%s%08d",apnInfoes[i].deviceid,unitNum,today_str,PingNum )
-				StrBody += "&resultSn=" + resultSn
-				StrBody += "&cmdId=" + strconv.Itoa(apnInfoes[i].cmdid)
-				StrBody += "&cmdType=" + strconv.Itoa(apnInfoes[i].cmdtype)
-				StrBody += "&apnId=" + strconv.Itoa(apnInfoes[i].apnid)
-				StrBody += "&netType=" + strconv.Itoa(apnInfoes[i].netType)
-				StrBody += "&errType=" + strconv.Itoa(1)
-				StrBody += "&apnActivate=" + strconv.Itoa(0)
-				StrBody += "&ipIsGet=" + strconv.Itoa(0)
+			receiveCom(s,unitNum,conn)
+			i -= 1
+			continue
+		}else if opencode == 10003 {
+			StrBody := "unitPhone=" + apnInfoes[i].phoneNum
+			now := time.Now()
+			year, month, day := now.Date()
+			today_str := fmt.Sprintf("%04d%02d%02d", year, month, day)
+			resultSn := fmt.Sprintf("%03d%d%s%08d",apnInfoes[i].deviceid,unitNum,today_str,PingNum )
+			StrBody += "&resultSn=" + resultSn
+			StrBody += "&cmdId=" + strconv.Itoa(apnInfoes[i].cmdid)
+			StrBody += "&cmdType=" + strconv.Itoa(apnInfoes[i].cmdtype)
+			StrBody += "&apnId=" + strconv.Itoa(apnInfoes[i].apnid)
+			StrBody += "&netType=" + strconv.Itoa(apnInfoes[i].netType)
+			StrBody += "&errType=" + strconv.Itoa(1)
+			StrBody += "&apnActivate=" + strconv.Itoa(0)
+			StrBody += "&ipIsGet=" + strconv.Itoa(0)
 
-				StrBody += "&ipaddr=" + ""
+			StrBody += "&ipaddr=" + ""
 
-				StrBody += "&pingMobileIP=" + "0"
-				StrBody += "&pingMobileIPText=" + ""
+			StrBody += "&pingMobileIP=" + "0"
+			StrBody += "&pingMobileIPText=" + ""
 
-				StrBody += "&pingEndIP=" + "0"
-				StrBody += "&pingEndIPText=" + ""
+			StrBody += "&pingEndIP=" + "0"
+			StrBody += "&pingEndIPText=" + ""
 
-				StrBody += "&pingExchangeIP=" + strconv.Itoa(0)
-				StrBody += "&pingExchangeIPText=" + ""
+			StrBody += "&pingExchangeIP=" + strconv.Itoa(0)
+			StrBody += "&pingExchangeIPText=" + ""
 
-				apnStartTimeStr := fmt.Sprintf("%d",apnStartTime.Unix())
-				StrBody += "&startTime=" + apnStartTimeStr
-				StrBody += "&endTime=" + fmt.Sprintf("%d",time.Now().Unix())
+			apnStartTimeStr := fmt.Sprintf("%d",apnStartTime.Unix())
+			StrBody += "&startTime=" + apnStartTimeStr
+			StrBody += "&endTime=" + fmt.Sprintf("%d",time.Now().Unix())
 
-				log.Println("i=",i)
-				//send_tcp(conn,StrBody)
-				msgstrul := "" + strconv.Itoa(unitNum)
-				msgstrul += "$strurl"
-				msgstrul = get_url(conn,msgstrul)
-				log.Println("strurl=",msgstrul)
-				if !isEmpty(msgstrul) {
-					httpPost(msgstrul,StrBody)
-				}
-				data_str :=strconv.Itoa(unitNum)
-				data_str += "$data"
-				send_tcp(conn,data_str)
-				time.Sleep(5*time.Second)
-				continue
+			log.Println("i=",i)
+			//send_tcp(conn,StrBody)
+			msgstrul := "" + strconv.Itoa(unitNum)
+			msgstrul += "$strurl"
+			msgstrul = get_url(conn,msgstrul)
+			log.Println("strurl=",msgstrul)
+			if !isEmpty(msgstrul) {
+				httpPost(msgstrul,StrBody)
 			}
+			data_str :=strconv.Itoa(unitNum)
+			data_str += "$data"
+			send_tcp(conn,data_str)
+			time.Sleep(5*time.Second)
+			continue
+		}
 
 		n, err = s.Write([]byte("AT+IPADDR\r\n"))
 		if err != nil {
@@ -371,56 +373,56 @@ func Ping_test(s io.ReadWriteCloser,unitNum int,PingNum int, conn net.Conn) ( er
 		//mask := "112.11.2.1/22"
 		IpAddrCode,getIp := receiveAtIpAddrCom(s,unitNum,apnInfoes[i].ggsnIP,conn)
 		log.Println("IpAddrCode = ",IpAddrCode)
-		//if 10000 != IpAddrCode{
-		//正常使用
-		// 测试使用
-		if 10003 == IpAddrCode{
+		if 10000 != IpAddrCode{
+			//正常使用
+			// 测试使用
+			//if 10003 == IpAddrCode{
 			n, err = s.Write([]byte("AT+NETCLOSE\r\n"))
 			if err != nil {
 				log.Fatal(err,n)
 			}
 			receiveCLOSECom(s,unitNum,conn)
 			StrBody := "unitPhone=" + apnInfoes[i].phoneNum
-				now := time.Now()
-				year, month, day := now.Date()
-				today_str := fmt.Sprintf("%04d%02d%02d", year, month, day)
-				resultSn := fmt.Sprintf("%03d%d%s%08d",apnInfoes[i].deviceid,unitNum,today_str,PingNum )
-				StrBody += "&resultSn=" + resultSn
-				StrBody += "&cmdId=" + strconv.Itoa(apnInfoes[i].cmdid)
-				StrBody += "&cmdType=" + strconv.Itoa(apnInfoes[i].cmdtype)
-				StrBody += "&apnId=" + strconv.Itoa(apnInfoes[i].apnid)
-				StrBody += "&netType=" + strconv.Itoa(apnInfoes[i].netType)
-				StrBody += "&errType=" + strconv.Itoa(1)
-				StrBody += "&apnActivate=" + strconv.Itoa(0)
-				StrBody += "&ipIsGet=" + strconv.Itoa(0)
+			now := time.Now()
+			year, month, day := now.Date()
+			today_str := fmt.Sprintf("%04d%02d%02d", year, month, day)
+			resultSn := fmt.Sprintf("%03d%d%s%08d",apnInfoes[i].deviceid,unitNum,today_str,PingNum )
+			StrBody += "&resultSn=" + resultSn
+			StrBody += "&cmdId=" + strconv.Itoa(apnInfoes[i].cmdid)
+			StrBody += "&cmdType=" + strconv.Itoa(apnInfoes[i].cmdtype)
+			StrBody += "&apnId=" + strconv.Itoa(apnInfoes[i].apnid)
+			StrBody += "&netType=" + strconv.Itoa(apnInfoes[i].netType)
+			StrBody += "&errType=" + strconv.Itoa(1)
+			StrBody += "&apnActivate=" + strconv.Itoa(0)
+			StrBody += "&ipIsGet=" + strconv.Itoa(0)
 
-				StrBody += "&ipaddr=" + ""
+			StrBody += "&ipaddr=" + ""
 
-				StrBody += "&pingMobileIP=" + "0"
-				StrBody += "&pingMobileIPText=" + ""
+			StrBody += "&pingMobileIP=" + "0"
+			StrBody += "&pingMobileIPText=" + ""
 
-				StrBody += "&pingEndIP=" + "0"
-				StrBody += "&pingEndIPText=" + ""
+			StrBody += "&pingEndIP=" + "0"
+			StrBody += "&pingEndIPText=" + ""
 
-				StrBody += "&pingExchangeIP=" + strconv.Itoa(0)
-				StrBody += "&pingExchangeIPText=" + ""
+			StrBody += "&pingExchangeIP=" + strconv.Itoa(0)
+			StrBody += "&pingExchangeIPText=" + ""
 
-				apnStartTimeStr := fmt.Sprintf("%d",apnStartTime.Unix())
-				StrBody += "&startTime=" + apnStartTimeStr
-				StrBody += "&endTime=" + fmt.Sprintf("%d",time.Now().Unix())
+			apnStartTimeStr := fmt.Sprintf("%d",apnStartTime.Unix())
+			StrBody += "&startTime=" + apnStartTimeStr
+			StrBody += "&endTime=" + fmt.Sprintf("%d",time.Now().Unix())
 
-				log.Println("i=",i)
-				msgstrul := strconv.Itoa(unitNum)
-				msgstrul += "$strurl"
-				msgstrul = get_url(conn,msgstrul)
+			log.Println("i=",i)
+			msgstrul := strconv.Itoa(unitNum)
+			msgstrul += "$strurl"
+			msgstrul = get_url(conn,msgstrul)
 			log.Println("strurl=",msgstrul)
-				if !isEmpty(msgstrul) {
-					httpPost(msgstrul,StrBody)
-				}
+			if !isEmpty(msgstrul) {
+				httpPost(msgstrul,StrBody)
+			}
 			data_str :=strconv.Itoa(unitNum)
 			data_str += "$data"
 			send_tcp(conn,data_str)
-				time.Sleep(5*time.Second)
+			time.Sleep(5*time.Second)
 			continue
 		}
 
@@ -628,6 +630,9 @@ func get_cmd_info(Uint int,conn net.Conn)([]APN_info,int){
 	}
 	msg_info:=strings.Split(msg, "$")
 	apnNum, _  := strconv.Atoi(msg_info[0])
+	if apnNum == 0 {
+		return nil,0
+	}
 	//msg_info[1] = strings.Replace(msg_info[1], "\n", "", -1)
 	apn_list := strings.Split(msg_info[1], "&")
 	apnInfoes := make([]APN_info,0)
@@ -686,6 +691,7 @@ func test(Uint int,conn net.Conn){
 	}
 }
 
+
 func main() {
 	//var Unit_Num_T uint
 	//Unit_Num := flag.Int("Unit_Num", 0, "Unit_Num")
@@ -699,7 +705,7 @@ func main() {
 		defer conn.Close()
 	}
 	comlist:=get_com_info(conn)
-	Unit_Num,_ := strconv.Atoi(os.Args[1])
+	Unit_Num,_ := strconv.Atoi("4")
 	//UNITNUM := *Unit_Num
 	log.Println("UNITNUM= ",Unit_Num)
 	//var s[4] io.ReadWriteCloser
@@ -731,6 +737,7 @@ func main() {
 			num = 1
 		}
 		// 出让时间片
+		//asd
 	}
 
 }
